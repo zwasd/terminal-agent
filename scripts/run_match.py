@@ -4,7 +4,6 @@ import sys
 
 # Runs a single game
 def run_single_game(process_command):
-    print("Start run a match")
     p = subprocess.Popen(
         process_command,
         shell=True,
@@ -14,7 +13,6 @@ def run_single_game(process_command):
     # daemon necessary so game shuts down if this script is shut down by user
     p.daemon = 1
     p.wait()
-    print("Finished running match")
 
 # Get location of this run file
 file_dir = os.path.dirname(os.path.realpath(__file__))
@@ -29,12 +27,15 @@ print("Is windows: {}".format(is_windows))
 default_algo = parent_dir + "\\python-algo\\run.ps1" if is_windows else parent_dir + "/python-algo/run.sh"
 algo1 = default_algo
 algo2 = default_algo
+num_plays = None
 
 # If script run with params, use those algo locations when running the game
 if len(sys.argv) > 1:
     algo1 = sys.argv[1]
 if len(sys.argv) > 2:
     algo2 = sys.argv[2]
+if len(sys.argv) > 3:
+    num_plays = int(sys.argv[3])
 
 # If folder path is given instead of run file path, add the run file to the path based on OS
 # trailing_char deals with if there is a trailing \ or / or not after the directory name
@@ -56,4 +57,13 @@ else:
 print("Algo 1: ", algo1)
 print("Algo 2:", algo2)
 
-run_single_game("cd {} && java -jar engine.jar work {} {}".format(parent_dir, algo1, algo2))
+
+if num_plays is not None:
+  for i in range(1, num_plays+1):
+    print(f"\nStart run match {i}")
+    run_single_game("cd {} && java -jar engine.jar work {} {}".format(parent_dir, algo1, algo2))
+    print(f"Finished running match {i}\n")
+else:
+    print("\nStart run a match")
+    run_single_game("cd {} && java -jar engine.jar work {} {}".format(parent_dir, algo1, algo2))
+    print("Finished running match\n")
