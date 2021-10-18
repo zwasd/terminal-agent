@@ -64,6 +64,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         unit deployments, and transmitting your intended deployments to the
         game engine.
         """
+        state = json.loads(turn_state)
         game_state = gamelib.GameState(self.config, turn_state)
         gamelib.debug_write('Performing turn {} of your custom algo strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
@@ -77,6 +78,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             Update to next state
             Let the agent learn from the action
         """
+        reward = self.reward_function(state)
 
         game_state.submit_turn()
 
@@ -216,6 +218,39 @@ class AlgoStrategy(gamelib.AlgoCore):
         sessions to allow for discontinuous training, or uploading
         """
         pass
+
+    def reward_function(self, state, terminal=10000000, health=10, structure=1):
+        """
+        Reward function based on player and opponent stats and usefulness of the
+        deployed mobile and structure units.
+        """
+        # game end
+        if state['turnInfo'] == 0:
+            return terminal / math.log(state['endStats']['turns'] + 1) * \
+                    -1 if state['endStats']['winner'] == 2 else 1
+
+        p1_health = state['p1Stats'][0]
+        p2_health = state['p2Stats'][0]
+
+        # reward based on unit cost
+        p1_total_structure = 0
+        p2_total_structure = 0
+
+        p1_units = state['p1Units']
+        p2_units = state['p2Units']
+
+        p1_total_structure += len(p1_units[WALL]) + \
+                                len(p1_units[SUPPORT]) * 4 + \
+                                len(p1_units[TURRET]) * 2 + \
+                                state['p1Stats'][1]
+        p2_total_structure += len(p2_units[WALL]) + \
+                                len(p2_units[SUPPORT]) * 4 + \
+                                len(p2_units[TURRET]) * 2 + \
+                                state['p2Stats'][1]
+
+        return health * (p1_health - p2_health) + \
+                structure * (p1_total_structure - p2_total_structure)
+
 
 if __name__ == "__main__":
     # Initialise agent
