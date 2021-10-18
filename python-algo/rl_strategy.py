@@ -43,18 +43,30 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         gamelib.debug_write('Configuring your custom algo strategy...')
         self.config = config
-        global WALL, SUPPORT, TURRET, SCOUT, DEMOLISHER, INTERCEPTOR, MP, SP
+        global WALL, SUPPORT, TURRET, SCOUT, DEMOLISHER, INTERCEPTOR, REMOVE, UPGRADE, STRUCTURE_TYPES, ALL_UNITS, UNIT_TYPE_TO_INDEX
+        UNIT_TYPE_TO_INDEX = {}
         WALL = config["unitInformation"][0]["shorthand"]
+        UNIT_TYPE_TO_INDEX[WALL] = 0
         SUPPORT = config["unitInformation"][1]["shorthand"]
+        UNIT_TYPE_TO_INDEX[SUPPORT] = 1
         TURRET = config["unitInformation"][2]["shorthand"]
+        UNIT_TYPE_TO_INDEX[TURRET] = 2
         SCOUT = config["unitInformation"][3]["shorthand"]
+        UNIT_TYPE_TO_INDEX[SCOUT] = 3
         DEMOLISHER = config["unitInformation"][4]["shorthand"]
+        UNIT_TYPE_TO_INDEX[DEMOLISHER] = 4
         INTERCEPTOR = config["unitInformation"][5]["shorthand"]
+        UNIT_TYPE_TO_INDEX[INTERCEPTOR] = 5
+        REMOVE = config["unitInformation"][6]["shorthand"]
+        UNIT_TYPE_TO_INDEX[REMOVE] = 6
+        UPGRADE = config["unitInformation"][7]["shorthand"]
+        UNIT_TYPE_TO_INDEX[UPGRADE] = 7
         MP = 1 # Mobile points
         SP = 0 # Structure points
 
         # This is a good place to do initial setup
         self.scored_on_locations = []
+        self.prev_state = None
 
     def on_turn(self, turn_state):
         """
@@ -78,9 +90,10 @@ class AlgoStrategy(gamelib.AlgoCore):
             Update to next state
             Let the agent learn from the action
         """
-        reward = self.reward_function(state)
+        reward = self.reward_function(self.prev_state, state)
 
         game_state.submit_turn()
+        self.prev_state = state
 
     def on_action_frame(self, turn_string):
         """
@@ -219,10 +232,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         pass
 
-    def reward_function(self, state, terminal=10000000, health=10, structure=1):
+    def state_reward(self, state, terminal, health, structure):
         """
-        Reward function based on player and opponent stats and usefulness of the
-        deployed mobile and structure units.
+        Reward for a particular state based on player and opponent stats and 
+        usefulness of the deployed mobile and structure units.
         """
         # game end
         if state['turnInfo'] == 0:
@@ -239,17 +252,27 @@ class AlgoStrategy(gamelib.AlgoCore):
         p1_units = state['p1Units']
         p2_units = state['p2Units']
 
-        p1_total_structure += len(p1_units[WALL]) + \
-                                len(p1_units[SUPPORT]) * 4 + \
-                                len(p1_units[TURRET]) * 2 + \
+        p1_total_structure += len(p1_units[UNIT_TYPE_TO_INDEX[WALL]]) + \
+                                len(p1_units[UNIT_TYPE_TO_INDEX[SUPPORT]]) * 4 + \
+                                len(p1_units[UNIT_TYPE_TO_INDEX[TURRET]]) * 2 + \
                                 state['p1Stats'][1]
-        p2_total_structure += len(p2_units[WALL]) + \
-                                len(p2_units[SUPPORT]) * 4 + \
-                                len(p2_units[TURRET]) * 2 + \
+        p2_total_structure += len(p2_units[UNIT_TYPE_TO_INDEX[WALL]]) + \
+                                len(p2_units[UNIT_TYPE_TO_INDEX[SUPPORT]]) * 4 + \
+                                len(p2_units[UNIT_TYPE_TO_INDEX[TURRET]]) * 2 + \
                                 state['p2Stats'][1]
 
         return health * (p1_health - p2_health) + \
                 structure * (p1_total_structure - p2_total_structure)
+
+    def reward_function(self, prev_state, state, terminal=10000000, health=10, structure=1):
+        """
+        Reward difference between previous and current state
+        """
+        if prev_state == None:
+            return 0
+
+        return self.state_reward(state, terminal, health, structure) - \
+            self.state_reward(prev_state, terminal, health, structure)
 
 
 if __name__ == "__main__":
