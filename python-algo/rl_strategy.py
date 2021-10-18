@@ -43,7 +43,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         gamelib.debug_write('Configuring your custom algo strategy...')
         self.config = config
-        global WALL, SUPPORT, TURRET, SCOUT, DEMOLISHER, INTERCEPTOR, REMOVE, UPGRADE, STRUCTURE_TYPES, ALL_UNITS, UNIT_TYPE_TO_INDEX
+        global WALL, SUPPORT, TURRET, SCOUT, DEMOLISHER, INTERCEPTOR, REMOVE, UPGRADE, UNIT_TYPE_TO_INDEX, MP, SP
         UNIT_TYPE_TO_INDEX = {}
         WALL = config["unitInformation"][0]["shorthand"]
         UNIT_TYPE_TO_INDEX[WALL] = 0
