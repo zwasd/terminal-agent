@@ -238,7 +238,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         usefulness of the deployed mobile and structure units.
         """
         # game end
-        if state['turnInfo'] == 0:
+        if state['turnInfo'] == 2:
             return terminal / math.log(state['endStats']['turns'] + 1) * \
                     -1 if state['endStats']['winner'] == 2 else 1
 
