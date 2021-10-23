@@ -8,6 +8,7 @@ import json
 import tensorflow as tf
 from rl_agent import Agent # Import RL Agent
 from sklearn.preprocessing import OneHotEncoder
+import os
 
 # Define global variable here to avoid scope issues
 WALL=SUPPORT=TURRET=SCOUT=DEMOLISHER=INTERCEPTOR=REMOVE=UPGRADE=UNIT_TYPE_TO_INDEX=MP=SP=None
@@ -44,15 +45,18 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.previous_attacks = []
         self.previous_next_states = []
 
-        # Initialise agents
-        self.defence_agent = Agent(alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
-                                   memory_size=1000000, batch_size=64, epsilon_min=0.01, input_shape=425, epsilon=0.5)
-        self.attack_agent = Agent(alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
-                                  memory_size=1000000, batch_size=64, epsilon_min=0.01, input_shape=425, epsilon=0.5)
+        algo_path = os.path.dirname(__file__)
+        defence_agent_file = os.path.join(algo_path, "defence.h5")
+        attack_agent_file = os.path.join(algo_path, "attack.h5")
 
-        if load:
-            self.defence_agent.load_model("defence_agent.h5") # For loading in old models
-            self.attack_agent.load_model("attack_agent.h5")
+        gamelib.debug_write(f"algo path: {algo_path}")
+        gamelib.debug_write(f"defence model file: {defence_agent_file}")
+        gamelib.debug_write(f"attack model file: {attack_agent_file}")
+        # Initialise agents
+        self.defence_agent = Agent(fname=defence_agent_file, alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
+                                   memory_size=1000000, batch_size=64, epsilon_min=0.01, input_shape=425, epsilon=0.5)
+        self.attack_agent = Agent(fname=attack_agent_file, alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
+                                  memory_size=1000000, batch_size=64, epsilon_min=0.01, input_shape=425, epsilon=0.5)
 
     def on_game_start(self, config):
         """ 

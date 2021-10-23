@@ -104,8 +104,8 @@ class Agent():
     '''
     Generate the reinforcement learning agent
     '''
-    def __init__(self, alpha, gamma, num_actions, epsilon, batch_size, input_shape,
-                 epsilon_dec=0.996, epsilon_min=0.01, memory_size=100000, fname='rl-algo/rl_agent.h5'):
+    def __init__(self, alpha, gamma, num_actions, epsilon, batch_size, input_shape, fname,
+                 epsilon_dec=0.996, epsilon_min=0.01, memory_size=100000):
         '''
         Initialise the agent
         - alpha: learning rate for DQN
