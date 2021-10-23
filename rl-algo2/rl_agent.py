@@ -23,14 +23,16 @@ class ReplayBuffer():
         - reward_memory: keep track of rewards in the environment
         - terminal_memory: keep track of terminal flags in the environment
         '''
-        self.memory_size = max_size
+
+        self.mem_size = max_size
         self.discrete = discrete
-        self.state_memory = np.zeros((self.mem_size, input_shape))
-        self.new_state_memory = np.zeros((self.mem_size, input_shape))
-        dtype = np.int8 if self.discrete else np.float32
+        dtype = np.int8 if self.discrete else np.float16
+
+        self.state_memory = np.zeros((self.mem_size, input_shape), dtype=dtype)
+        self.new_state_memory = np.zeros((self.mem_size, input_shape), dtype=dtype)
         self.action_memory = np.zeros((self.mem_size, num_actions), dtype=dtype)
-        self.reward_memory = np.zeros((self.mem_size))
-        self.terminal_memory = np.zeros(self.mem_size, dtype=np.float32)
+        self.reward_memory = np.zeros((self.mem_size), dtype=dtype)
+        self.terminal_memory = np.zeros((self.mem_size), dtype=dtype)
         self.memory_counter = 0
 
     def store_transition(self, state, action, reward, next_state, done):
@@ -38,7 +40,7 @@ class ReplayBuffer():
         Store the transition function
         - index: to loop back to the start if memory is full, and replace the first experience
         '''
-        index = self.memory_counter % self.memory_size
+        index = self.memory_counter % self.mem_size
         
         # Update memory
         self.state_memory[index] = state
@@ -62,7 +64,7 @@ class ReplayBuffer():
         Batch selection is random to avoid selection of sequential memories
         which would lead to correlations in learning
         '''
-        max_memory = min(self.memory_counter, self.memory_size)
+        max_memory = min(self.memory_counter, self.mem_size)
         batch = np.random.choice(max_memory, batch_size) # Returns an array of values, randomly chosen from max_memory
 
         # Get the sampled states
@@ -93,7 +95,7 @@ def build_dqn(lr, num_actions, input_shape, layer1_shape, layer2_shape):
     model.add(layers.Dense(num_actions))
 
     # Compile the model
-    model.compile(optimizer='Adam', loss='mse', lr=lr)
+    model.compile(optimizer='Adam', loss='mse')
 
     return model
 
@@ -103,7 +105,7 @@ class Agent():
     Generate the reinforcement learning agent
     '''
     def __init__(self, alpha, gamma, num_actions, epsilon, batch_size, input_shape,
-                 epsilon_dec=0.996, epsilon_min=0.01, memory_size=100000, fname='rl_agent.h5'):
+                 epsilon_dec=0.996, epsilon_min=0.01, memory_size=100000, fname='rl-algo2/rl_agent.h5'):
         '''
         Initialise the agent
         - alpha: learning rate for DQN
@@ -130,7 +132,10 @@ class Agent():
         self.memory = ReplayBuffer(memory_size, input_shape, num_actions, discrete=True)
 
         # Create the model
-        self.dqn = build_dqn(alpha, num_actions, input_shape, 128, 128)
+        try:
+          self.load_model()
+        except OSError:
+          self.dqn = build_dqn(alpha, num_actions, input_shape, 128, 128)
 
     def choose_action(self, state):
         '''
@@ -186,8 +191,14 @@ class Agent():
         else:
             self.epsilon = self.epsilon_min
 
+        # Save model after training
+        self.save_model()
+
     def save_model(self):
         self.dqn.save(self.model_file)
 
     def load_model(self):
         self.dqn = load_model(self.model_file)
+
+    def remember(self, state, action, reward, next_state, done):
+        self.memory.store_transition(state, action, reward, next_state, done)
