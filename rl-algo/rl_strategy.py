@@ -269,19 +269,19 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         defence_actions = []
         attack_actions = []
-        for ml in self.mobile_locations:
+        for ml in self.mobile_locations: # FOR ATTACK
             # Mobile units: SCOUT, DEMOLISHER, INTERCEPTOR
-            defence_actions.append((SCOUT, ml))
-            defence_actions.append((DEMOLISHER, ml))
-            defence_actions.append((INTERCEPTOR, ml))
-        for sl in self.structure_locations:
+            attack_actions.append((SCOUT, ml))
+            attack_actions.append((DEMOLISHER, ml))
+            attack_actions.append((INTERCEPTOR, ml))
+        for sl in self.structure_locations: # FOR DEFENCE
             # Structure units: WALL, SUPPORT, TURRET
-            attack_actions.append((WALL, sl))
-            attack_actions.append((SUPPORT, sl))
-            attack_actions.append((TURRET, sl))
+            defence_actions.append((WALL, sl))
+            defence_actions.append((SUPPORT, sl))
+            defence_actions.append((TURRET, sl))
             # Allow for upgrades - I think this function does not need a specific unit type
             # But will have to check for the string, to know whether to deploy or upgrade unit
-            attack_actions.append(("UPGRADE", sl))
+            defence_actions.append(("UPGRADE", sl))
         # Add action to end turn
         defence_actions.append(("END", 0))
         attack_actions.append(("END", 0))
