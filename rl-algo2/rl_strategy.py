@@ -269,12 +269,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         defence_actions = []
         attack_actions = []
-        for ml in self.mobile_locations:
+        for ml in self.mobile_locations: # FOR ATTACK
             # Mobile units: SCOUT, DEMOLISHER, INTERCEPTOR
             attack_actions.append((SCOUT, ml))
             attack_actions.append((DEMOLISHER, ml))
             attack_actions.append((INTERCEPTOR, ml))
-        for sl in self.structure_locations:
+        for sl in self.structure_locations: # FOR DEFENCE
             # Structure units: WALL, SUPPORT, TURRET
             defence_actions.append((WALL, sl))
             defence_actions.append((SUPPORT, sl))
@@ -333,7 +333,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                         state.append(-1)
                     # Else, add the corresponding unit
                     else:
-                        state.append(UNIT_TYPE_TO_INDEX[game_state.game_map[x, y][0]])
+                        state.append(UNIT_TYPE_TO_INDEX[game_state.game_map[x, y][0].unit_type])
 
         return np.array(state, dtype=np.float16)
 

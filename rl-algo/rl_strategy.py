@@ -333,7 +333,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                         state.append(-1)
                     # Else, add the corresponding unit
                     else:
-                        state.append(UNIT_TYPE_TO_INDEX[game_state.game_map[x, y][0]])
+                        state.append(UNIT_TYPE_TO_INDEX[game_state.game_map[x, y][0].unit_type])
 
         return np.array(state, dtype=np.float16)
 
