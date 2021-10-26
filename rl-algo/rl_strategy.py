@@ -10,20 +10,10 @@ from rl_agent import Agent # Import RL Agent
 from sklearn.preprocessing import OneHotEncoder
 import os
 
-# Define global variable here to avoid scope issues
-WALL=SUPPORT=TURRET=SCOUT=DEMOLISHER=INTERCEPTOR=REMOVE=UPGRADE=UNIT_TYPE_TO_INDEX=MP=SP=None
-
 """
-Version date: 21/10/21
+Version date: 26/10/21
 
-Added functions:
-- reward_function(previous_state, current_state)
-
-- Added full code for running the agent
-
-To do:
-- Implement code for DQN to carry over from game to game
-- Check if terminal rewards are updated properly in on_action_frame
+- Shifted agent and action initialisation from __init__ to on_game_start
 """
 
 class AlgoStrategy(gamelib.AlgoCore):
@@ -36,7 +26,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Additions
         self.mobile_locations = self.initialise_mobile()
         self.structure_locations = self.initialise_structure()
-        self.defence_actions, self.attack_actions = self.generate_actions()
+        # generate_actions() cannot be done here as the global parameters are not initialised yet
+        # We can generate_actions on_game_start
+        # self.defence_actions = [] 
+        # self.attack_actions = []
         self.done = False # Whether the game has ended
         self.updated_last = False # Whether the final update with terminal rewards is done
         self.previous_state = None
@@ -45,18 +38,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.previous_attacks = []
         self.previous_next_states = []
 
-        algo_path = os.path.dirname(__file__)
-        defence_agent_file = os.path.join(algo_path, "defence.h5")
-        attack_agent_file = os.path.join(algo_path, "attack.h5")
-
-        gamelib.debug_write(f"algo path: {algo_path}")
-        gamelib.debug_write(f"defence model file: {defence_agent_file}")
-        gamelib.debug_write(f"attack model file: {attack_agent_file}")
-        # Initialise agents
-        self.defence_agent = Agent(fname=defence_agent_file, alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
-                                   memory_size=1000000, batch_size=64, epsilon_min=0.01, input_shape=425, epsilon=0.5)
-        self.attack_agent = Agent(fname=attack_agent_file, alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
-                                  memory_size=1000000, batch_size=64, epsilon_min=0.01, input_shape=425, epsilon=0.5)
+        
 
     def on_game_start(self, config):
         """ 
@@ -97,6 +79,20 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # This is a good place to do initial setup
         self.scored_on_locations = []
+        self.defence_actions, self.attack_actions = self.generate_actions()
+
+        algo_path = os.path.dirname(__file__)
+        defence_agent_file = os.path.join(algo_path, "defence.h5")
+        attack_agent_file = os.path.join(algo_path, "attack.h5")
+
+        gamelib.debug_write(f"algo path: {algo_path}")
+        gamelib.debug_write(f"defence model file: {defence_agent_file}")
+        gamelib.debug_write(f"attack model file: {attack_agent_file}")
+        # Initialise agents
+        self.defence_agent = Agent(fname=defence_agent_file, alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
+                                   memory_size=1000000, batch_size=64, epsilon_min=0.01, input_shape=425, epsilon=0.5)
+        self.attack_agent = Agent(fname=attack_agent_file, alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
+                                  memory_size=1000000, batch_size=64, epsilon_min=0.01, input_shape=425, epsilon=0.5)
 
     def on_turn(self, turn_state):
         """
@@ -108,7 +104,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         game_state = gamelib.GameState(self.config, turn_state)
         gamelib.debug_write('Performing turn {} of your custom algo strategy'.format(game_state.turn_number))
-        game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
+        # game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
 
         """ Put our agent action here """
         current_state = self.retrieve_state(game_state)
