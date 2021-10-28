@@ -11,7 +11,6 @@ class ReplayBuffer():
     During learning, we apply Q-learning updates on samples of experience,
     drawn uniformly at random from the pool of stored samples
     '''
-
     def __init__(self, max_size, input_shape, num_actions, discrete=False):
         '''
         Variables:
@@ -76,6 +75,27 @@ class ReplayBuffer():
 
         return states, actions, rewards, next_states, terminal
 
+    def save(self, filepath):
+        np.savez_compressed(filepath, 
+                            mem_size = self.mem_size,
+                            state_memory = self.state_memory,
+                            new_state_memory = self.new_state_memory,
+                            action_memory = self.action_memory,
+                            reward_memory = self.reward_memory,
+                            terminal_memory = self.terminal_memory,
+                            memory_counter = self.memory_counter
+        )
+    
+    def load(self, filepath):
+        npzfile = np.load(filepath)
+        self.mem_size = npzfile['mem_size']
+        self.state_memory = npzfile['state_memory']
+        self.new_state_memory = npzfile['new_state_memory']
+        self.action_memory = npzfile['action_memory']
+        self.reward_memory = npzfile['reward_memory']
+        self.terminal_memory = npzfile['terminal_memory']
+        self.memory_counter = npzfile['memory_counter']
+
 
 def build_dqn(lr, num_actions, input_shape, layer1_shape, layer2_shape):
     '''
@@ -126,14 +146,14 @@ class Agent():
         self.epsilon_dec = epsilon_dec
         self.epsilon_min = epsilon_min
         self.batch_size = batch_size
-        self.model_file = fname
+        self.model_file = fname[0]
+        self.memo_file = fname[1]
 
-        # Create the replay buffer to store experiences
         self.memory = ReplayBuffer(memory_size, input_shape, num_actions, discrete=True)
 
-        # Load/Create the model
+        # Load/Create the model and the replay buffer
         try:
-          self.load_model()
+          self.load_model_and_memory()
         except OSError:
           self.dqn = build_dqn(alpha, num_actions, input_shape, 128, 128)
 
@@ -191,13 +211,19 @@ class Agent():
         else:
             self.epsilon = self.epsilon_min
 
-        # Save model after training
-        self.save_model()
+        # Save model and replay buffer after training
+        # self.save_model_and_memory()
 
-    def save_model(self):
+    def save_model_and_memory(self):
+        # Save replay buffer
+        self.memory.save(self.memo_file)
+        # Save model
         self.dqn.save(self.model_file)
 
-    def load_model(self):
+    def load_model_and_memory(self):
+        # Load replay buffer
+        self.memory.load(self.memo_file)
+        # Save model
         self.dqn = load_model(self.model_file)
 
     def remember(self, state, action, reward, next_state, done):

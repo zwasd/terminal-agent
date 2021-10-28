@@ -84,15 +84,18 @@ class AlgoStrategy(gamelib.AlgoCore):
         algo_path = os.path.dirname(__file__)
         defence_agent_file = os.path.join(algo_path, "defence.h5")
         attack_agent_file = os.path.join(algo_path, "attack.h5")
-
-        gamelib.debug_write(f"algo path: {algo_path}")
-        gamelib.debug_write(f"defence model file: {defence_agent_file}")
-        gamelib.debug_write(f"attack model file: {attack_agent_file}")
+        defence_memo_file = os.path.join(algo_path, "defence.npz")
+        attack_memo_file = os.path.join(algo_path, "attack.npz")
+        
         # Initialise agents
-        self.defence_agent = Agent(fname=defence_agent_file, alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
-                                   memory_size=1000000, batch_size=64, epsilon_min=0.01, input_shape=425, epsilon=0.5)
-        self.attack_agent = Agent(fname=attack_agent_file, alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
-                                  memory_size=1000000, batch_size=64, epsilon_min=0.01, input_shape=425, epsilon=0.5)
+        self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file), 
+                                   alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
+                                   memory_size=100000, batch_size=64, epsilon_min=0.01, 
+                                   input_shape=425, epsilon=0.5)
+        self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file), 
+                                  alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
+                                  memory_size=100000, batch_size=64, epsilon_min=0.01, 
+                                  input_shape=425, epsilon=0.5)
 
     def on_turn(self, turn_state):
         """
@@ -197,33 +200,30 @@ class AlgoStrategy(gamelib.AlgoCore):
                 self.scored_on_locations.append(location)
                 # gamelib.debug_write("All locations: {}".format(self.scored_on_locations))
 
-        # Check if final update was already done:
-        if self.updated_last:
-            return
-
-        # Check if game is over
+    def on_game_end(self, game_state):
         # We should be able to use the state json string
-        if state['turnInfo'] == 2:
-            self.done = True
-            self.updated_last = True
-            # Winner: 1 is ourselves, 2 is the opponent
-            winner = state['endStats']['winner']
-            reward = 10000 if winner == 1 else -10000
+        state = json.loads(game_state)
+        self.done = True
+        # Winner: 1 is ourselves, 2 is the opponent
+        winner = state['endStats']['winner']
+        reward = 10000 if winner == 1 else -10000
 
-            # Remember the previous experiences. All previous actions will have the same reward
-            # Remember for each agent
-            for i in range(len(self.previous_defences)):
-                self.defence_agent.remember(self.previous_states[i], self.previous_defences[i], reward, 
-                                            self.previous_next_states[i], self.done)
-            for i in range(len(self.previous_attacks)):
-                self.attack_agent.remember(self.previous_states[i], self.previous_attacks[i], reward, 
-                                           self.previous_next_states[i], self.done)
-            
-            # Agent learn from replay memory
-            self.attack_agent.learn()
-            self.defence_agent.learn()
+        # Remember the previous experiences. All previous actions will have the same reward
+        # Remember for each agent
+        for i in range(len(self.previous_defences)):
+            self.defence_agent.remember(self.previous_states[i], self.previous_defences[i], reward, 
+                                        self.previous_next_states[i], self.done)
+        for i in range(len(self.previous_attacks)):
+            self.attack_agent.remember(self.previous_states[i], self.previous_attacks[i], reward, 
+                                        self.previous_next_states[i], self.done)
+        
+        # Agent learn from replay memory
+        self.attack_agent.learn()
+        self.defence_agent.learn()
 
-
+        # Agent save model and replay memory
+        self.attack_agent.save_model_and_memory()
+        self.defence_agent.save_model_and_memory()
 
     def initialise_mobile(self):
         """

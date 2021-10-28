@@ -43,6 +43,11 @@ class AlgoCore(object):
         """
         pass
 
+    def on_game_end(self, game_state):
+        """
+        Trigger this when game ends. 
+        """
+        pass
 
     def start(self):
         """ 
@@ -81,6 +86,7 @@ class AlgoCore(object):
                     """
                     This is the end game message. This means the game is over so break and finish the program.
                     """
+                    self.on_game_end(game_state_string)
                     debug_write("Got end state, game over. Stopping algo.")
                     break
                 else:
