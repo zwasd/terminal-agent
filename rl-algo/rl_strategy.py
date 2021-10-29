@@ -7,7 +7,6 @@ import numpy as np
 import json
 import tensorflow as tf
 from rl_agent import Agent # Import RL Agent
-from sklearn.preprocessing import OneHotEncoder
 import os
 
 """
@@ -17,7 +16,7 @@ Version date: 26/10/21
 """
 
 class AlgoStrategy(gamelib.AlgoCore):
-    def __init__(self, load=False):
+    def __init__(self):
         super().__init__()
         seed = random.randrange(maxsize)
         random.seed(seed)
@@ -46,7 +45,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         # gamelib.debug_write('Configuring your custom algo strategy...')
         self.config = config
-        global WALL, SUPPORT, TURRET, SCOUT, DEMOLISHER, INTERCEPTOR, MP, SP, UNIT_TYPE_TO_INDEX
+        global WALL, SUPPORT, TURRET, SCOUT, DEMOLISHER, INTERCEPTOR, REMOVE, UPGRADE, MP, SP, UNIT_TYPE_TO_INDEX
 
         UNIT_TYPE_TO_INDEX = {}
         
@@ -78,6 +77,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         SP = 0 # Structure points
 
         # This is a good place to do initial setup
+        self.game_map = gamelib.GameMap(config)
         self.scored_on_locations = []
         self.defence_actions, self.attack_actions = self.generate_actions()
 
@@ -90,12 +90,13 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Initialise agents
         self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file), 
                                    alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
-                                   memory_size=100000, batch_size=64, epsilon_min=0.01, 
+                                   memory_size=10000, batch_size=64, epsilon_min=0.01, 
                                    input_shape=425, epsilon=0.5)
         self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file), 
                                   alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
-                                  memory_size=100000, batch_size=64, epsilon_min=0.01, 
+                                  memory_size=10000, batch_size=64, epsilon_min=0.01, 
                                   input_shape=425, epsilon=0.5)
+
 
     def on_turn(self, turn_state):
         """
@@ -235,8 +236,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         x = 0
         mobile_locations = []
         while x < 14:
-            mobile_locations.append((x     , y))
-            mobile_locations.append((27 - x, y))
+            mobile_locations.append([x     , y])
+            mobile_locations.append([27 - x, y])
             x += 1
             y -= 1
         return mobile_locations
@@ -251,8 +252,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         structure_locations = []
         for x in range(14):
             for _y in range(y):
-                structure_locations.append((x     , 13 - _y))
-                structure_locations.append((27 - x, 13 - _y))
+                structure_locations.append([x     , 13 - _y])
+                structure_locations.append([27 - x, 13 - _y])
             y += 1
         return structure_locations
 
@@ -277,7 +278,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             defence_actions.append((TURRET, sl))
             # Allow for upgrades - I think this function does not need a specific unit type
             # But will have to check for the string, to know whether to deploy or upgrade unit
-            defence_actions.append(("UPGRADE", sl))
+            defence_actions.append((UPGRADE, sl))
         # Add action to end turn
         defence_actions.append(("END", 0))
         attack_actions.append(("END", 0))
@@ -293,7 +294,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         End handling will be done outside, in on_turn function
         """
         unit, coordinates = action
-        if unit == "UPGRADE":
+        if unit == UPGRADE:
             game_state.attempt_upgrade(coordinates)
         else:
             game_state.attempt_spawn(unit, coordinates)
@@ -318,8 +319,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         state.append(game_state.turn_number)
         state.append(MP)
         state.append(SP)
-        # Get state of every position on the board, and append the one-hot encoded
-        # unit to the state
+        # Get state of every position on the board
         for y in range(28):
             for x in range(28):
                 # Check if is valid position:
@@ -357,12 +357,17 @@ class AlgoStrategy(gamelib.AlgoCore):
     #         reward = current_my_health - previous_my_health
     #     return reward
 
+    def attack_reward(self, state):
+        pass
+
+    def defence_reward(self, state):
+        pass
+
     def state_reward(self, state, terminal, health, structure):
         """
         Reward for a particular state based on player and opponent stats and 
         usefulness of the deployed mobile and structure units.
         """
-        global WALL, SUPPORT, TURRET, SCOUT, DEMOLISHER, INTERCEPTOR, MP, SP, UNIT_TYPE_TO_INDEX
         state = json.loads(state)
 
         # game end
