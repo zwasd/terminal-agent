@@ -86,13 +86,15 @@ class AlgoStrategy(gamelib.AlgoCore):
         attack_agent_file = os.path.join(algo_path, "attack.h5")
         defence_memo_file = os.path.join(algo_path, "defence.npz")
         attack_memo_file = os.path.join(algo_path, "attack.npz")
+        defence_epsilon_file = os.path.join(algo_path, "defence_epsilon.npz")
+        attack_epsilon_file = os.path.join(algo_path, "attack_epsilon.npz")
         
         # Initialise agents
-        self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file), 
+        self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file, defence_epsilon_file), 
                                    alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
                                    memory_size=10000, batch_size=64, epsilon_min=0.01, 
                                    input_shape=425, epsilon=0.5)
-        self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file), 
+        self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file, attack_epsilon_file), 
                                   alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
                                   memory_size=10000, batch_size=64, epsilon_min=0.01, 
                                   input_shape=425, epsilon=0.5)
