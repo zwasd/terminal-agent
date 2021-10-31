@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.python.keras.saving.save import load_model
+from gamelib.save import load_model, save_model
 import gamelib
 
 class ReplayBuffer():
@@ -168,7 +168,6 @@ class Agent():
         '''  
         state = state[np.newaxis, :] # Transform the variable to include 1 more dimension, to fit into the DQN
         rand = np.random.random()
-        gamelib.debug_write(self.epsilon)
         # Exploration
         if rand < self.epsilon:
             action = np.random.choice(self.action_space)
@@ -215,16 +214,13 @@ class Agent():
         else:
             self.epsilon = self.epsilon_min
 
-        # Save model and replay buffer after training
-        # self.save_model_and_memory()
-
     def save_model_and_memory(self):
         # Save replay buffer
         self.memory.save(self.memo_file)
         # Save epsilon value
         np.savez_compressed(self.epsilon_file, epsilon = self.epsilon)
         # Save model
-        self.dqn.save(self.model_file)
+        save_model(self.dqn, self.model_file)
 
     def load_model_and_memory(self):
         # Load replay buffer
