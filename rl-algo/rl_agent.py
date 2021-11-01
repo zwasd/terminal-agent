@@ -2,8 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from gamelib.save import load_model, save_model
-import gamelib
+
 
 class ReplayBuffer():
     '''
@@ -220,7 +219,7 @@ class Agent():
         # Save epsilon value
         np.savez_compressed(self.epsilon_file, epsilon = self.epsilon)
         # Save model
-        save_model(self.dqn, self.model_file)
+        self.dqn.save(self.model_file)
 
     def load_model_and_memory(self):
         # Load replay buffer
@@ -228,7 +227,7 @@ class Agent():
         # Load epsilon value
         self.epsilon = np.load(self.epsilon_file)["epsilon"]
         # Save model
-        self.dqn = load_model(self.model_file)
+        self.dqn = tf.keras.models.load_model(self.model_file)
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.store_transition(state, action, reward, next_state, done)

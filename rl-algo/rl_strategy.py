@@ -82,8 +82,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.defence_actions, self.attack_actions = self.generate_actions()
 
         algo_path = os.path.dirname(__file__)
-        defence_agent_file = os.path.join(algo_path, "defence.h5")
-        attack_agent_file = os.path.join(algo_path, "attack.h5")
+        defence_agent_file = os.path.join(algo_path, "defence_model")
+        attack_agent_file = os.path.join(algo_path, "attack_model")
         defence_memo_file = os.path.join(algo_path, "defence.npz")
         attack_memo_file = os.path.join(algo_path, "attack.npz")
         defence_epsilon_file = os.path.join(algo_path, "defence_epsilon.npz")
