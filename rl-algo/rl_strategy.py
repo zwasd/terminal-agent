@@ -96,11 +96,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Initialise agents
         self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file, defence_epsilon_file), 
                                    alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
-                                   memory_size=100000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.996,
+                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.996,
                                    input_shape=425, epsilon=1)
         self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file, attack_epsilon_file), 
                                   alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
-                                  memory_size=100000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.996,
+                                  memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.996,
                                   input_shape=425, epsilon=1)
 
 
@@ -151,41 +151,41 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Deploy structure units for maximum 10 actions or when run out of SB
         i = 0
         while i < 10 and game_state.get_resource(0) >= 1:
-            self.previous_defence_states.append(next_s)
+            self.previous_defence_states.append(np.copy(next_s))
             
             defence_action_index = self.defence_agent.choose_action(next_s, i)
             self.previous_defences.append(defence_action_index)
             defence_action = self.defence_actions[defence_action_index]
             # If agent chooses to END
             if defence_action[0] == "END":
-                self.previous_defence_next_states.append(next_s)
+                self.previous_defence_next_states.append(np.copy(next_s))
                 break
             # Otherwise, execute action
             else:
                 self.execute_action(defence_action, game_state)
 
             next_s = self.retrieve_state(game_state)
-            self.previous_defence_next_states.append(next_s)
+            self.previous_defence_next_states.append(np.copy(next_s))
             i += 1
         
         # Deploy mobile units for maximum 10 actions or when run out of MB
         i = 0
         while i < 10 and game_state.get_resource(1) >= 1:
-            self.previous_attack_states.append(next_s)
+            self.previous_attack_states.append(np.copy(next_s))
 
             attack_action_index = self.attack_agent.choose_action(next_s, i)
             self.previous_attacks.append(attack_action_index)
             attack_action = self.attack_actions[attack_action_index]
             # If agent chooses to END
             if attack_action[0] == "END":
-                self.previous_attack_next_states.append(next_s)
+                self.previous_attack_next_states.append(np.copy(next_s))
                 break
             # Otherwise, execute action
             else:
                 self.execute_action(attack_action, game_state)
             
             next_s = self.retrieve_state(game_state)
-            self.previous_attack_next_states.append(next_s)
+            self.previous_attack_next_states.append(np.copy(next_s))
             i += 1
 
         # Save previous turn state to compute reward
