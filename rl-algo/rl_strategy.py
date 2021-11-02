@@ -32,10 +32,14 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.done = False # Whether the game has ended
         self.updated_last = False # Whether the final update with terminal rewards is done
         self.previous_state = None
-        self.previous_states = []
+        
+        self.previous_defence_states = []
         self.previous_defences = []
+        self.previous_defence_next_states = []
+
+        self.previous_attack_states = []
         self.previous_attacks = []
-        self.previous_next_states = []
+        self.previous_attack_next_states = []
 
         
 
@@ -92,11 +96,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Initialise agents
         self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file, defence_epsilon_file), 
                                    alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
-                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.996,
+                                   memory_size=100000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.996,
                                    input_shape=425, epsilon=1)
         self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file, attack_epsilon_file), 
                                   alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
-                                  memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.996,
+                                  memory_size=100000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.996,
                                   input_shape=425, epsilon=1)
 
 
@@ -116,69 +120,75 @@ class AlgoStrategy(gamelib.AlgoCore):
         current_state = self.retrieve_state(game_state)
         
         # Check if there are previous experiences to learn from first
-        if len(self.previous_states) > 0:
+        if len(self.previous_defence_states) > 0 or len(self.previous_attack_states) > 0:
             # Calculate reward
             reward = self.reward_function(self.previous_state, turn_state)
 
             # Remember the previous experiences. All previous actions will have the same reward
             # Remember for each agent
             for i in range(len(self.previous_defences)):
-                self.defence_agent.remember(self.previous_states[i], self.previous_defences[i], reward, 
-                                            self.previous_next_states[i], self.done)
+                self.defence_agent.remember(self.previous_defence_states[i], self.previous_defences[i], reward, 
+                                            self.previous_defence_next_states[i], self.done)
+            
             for i in range(len(self.previous_attacks)):
-                self.attack_agent.remember(self.previous_states[i], self.previous_attacks[i], reward, 
-                                           self.previous_next_states[i], self.done)
+                self.attack_agent.remember(self.previous_attack_states[i], self.previous_attacks[i], reward, 
+                                           self.previous_attack_next_states[i], self.done)
             
             # Agent learn from replay memory
             self.attack_agent.learn()
             self.defence_agent.learn()
 
             # Clear previous saved states to record new ones
-            self.previous_states.clear()
-            self.previous_attacks.clear()
+            self.previous_defence_states.clear()
             self.previous_defences.clear()
-            self.previous_next_states.clear()
+            self.previous_defence_next_states.clear()
+            self.previous_attack_states.clear()
+            self.previous_attacks.clear()
+            self.previous_attack_next_states.clear()
         
         next_s = current_state # Copy of current state for updating
-        defence_end = False
-        attack_end = False
 
-        # For a maximum of 10 actions
-        for i in range(10):
-            if defence_end and attack_end:
-                break
-
-            # Add next_s to previous_states
-            self.previous_states.append(next_s)
+        # Deploy structure units for maximum 10 actions or when run out of SB
+        i = 0
+        while i < 10 and game_state.get_resource(0) >= 1:
+            self.previous_defence_states.append(next_s)
             
-            # Attack agent choose action
-            if not attack_end:
-                attack_action_index = self.attack_agent.choose_action(next_s, i)
-                self.previous_attacks.append(attack_action_index)
-                attack_action = self.attack_actions[attack_action_index]
-                # If agent chooses to END
-                if attack_action[0] == "END":
-                    attack_end = True
-                # Otherwise, execute action
-                else:
-                    self.execute_action(attack_action, game_state)
+            defence_action_index = self.defence_agent.choose_action(next_s, i)
+            self.previous_defences.append(defence_action_index)
+            defence_action = self.defence_actions[defence_action_index]
+            # If agent chooses to END
+            if defence_action[0] == "END":
+                self.previous_defence_next_states.append(next_s)
+                break
+            # Otherwise, execute action
+            else:
+                self.execute_action(defence_action, game_state)
 
-            # Defence agent choose action
-            if not defence_end:
-                defence_action_index = self.defence_agent.choose_action(next_s, i)
-                self.previous_defences.append(defence_action_index)
-                defence_action = self.defence_actions[defence_action_index]
-                # If agent chooses to END
-                if defence_action[0] == "END":
-                    defence_end = True
-                # Otherwise, execute action
-                else:
-                    self.execute_action(defence_action, game_state)
-
-            # Update state after deploying units and add to previous_next_states
             next_s = self.retrieve_state(game_state)
-            self.previous_next_states.append(next_s)
+            self.previous_defence_next_states.append(next_s)
+            i += 1
+        
+        # Deploy mobile units for maximum 10 actions or when run out of MB
+        i = 0
+        while i < 10 and game_state.get_resource(1) >= 1:
+            self.previous_attack_states.append(next_s)
 
+            attack_action_index = self.attack_agent.choose_action(next_s, i)
+            self.previous_attacks.append(attack_action_index)
+            attack_action = self.attack_actions[attack_action_index]
+            # If agent chooses to END
+            if attack_action[0] == "END":
+                self.previous_attack_next_states.append(next_s)
+                break
+            # Otherwise, execute action
+            else:
+                self.execute_action(attack_action, game_state)
+            
+            next_s = self.retrieve_state(game_state)
+            self.previous_attack_next_states.append(next_s)
+            i += 1
+
+        # Save previous turn state to compute reward
         self.previous_state = turn_state
         game_state.submit_turn()
 
@@ -214,11 +224,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Remember the previous experiences. All previous actions will have the same reward
         # Remember for each agent
         for i in range(len(self.previous_defences)):
-            self.defence_agent.remember(self.previous_states[i], self.previous_defences[i], reward, 
-                                        self.previous_next_states[i], self.done)
+            self.defence_agent.remember(self.previous_defence_states[i], self.previous_defences[i], reward, 
+                                        self.previous_defence_next_states[i], self.done)
         for i in range(len(self.previous_attacks)):
-            self.attack_agent.remember(self.previous_states[i], self.previous_attacks[i], reward, 
-                                        self.previous_next_states[i], self.done)
+            self.attack_agent.remember(self.previous_attack_states[i], self.previous_attacks[i], reward, 
+                                        self.previous_attack_next_states[i], self.done)
         
         # Agent learn from replay memory
         self.attack_agent.learn()
