@@ -82,8 +82,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.defence_actions, self.attack_actions = self.generate_actions()
 
         algo_path = os.path.dirname(__file__)
-        defence_agent_file = os.path.join(algo_path, "defence.h5")
-        attack_agent_file = os.path.join(algo_path, "attack.h5")
+        defence_agent_file = os.path.join(algo_path, "defence_model")
+        attack_agent_file = os.path.join(algo_path, "attack_model")
         defence_memo_file = os.path.join(algo_path, "defence.npz")
         attack_memo_file = os.path.join(algo_path, "attack.npz")
         defence_epsilon_file = os.path.join(algo_path, "defence_epsilon.npz")
@@ -92,12 +92,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Initialise agents
         self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file, defence_epsilon_file), 
                                    alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
-                                   memory_size=10000, batch_size=64, epsilon_min=0.01, 
-                                   input_shape=425, epsilon=0.5)
+                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.9996,
+                                   input_shape=425, epsilon=1)
         self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file, attack_epsilon_file), 
                                   alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
-                                  memory_size=10000, batch_size=64, epsilon_min=0.01, 
-                                  input_shape=425, epsilon=0.5)
+                                  memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.9996,
+                                  input_shape=425, epsilon=1)
 
 
     def on_turn(self, turn_state):
@@ -153,7 +153,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             
             # Attack agent choose action
             if not attack_end:
-                attack_action_index = self.attack_agent.choose_action(next_s)
+                attack_action_index = self.attack_agent.choose_action(next_s, i)
                 self.previous_attacks.append(attack_action_index)
                 attack_action = self.attack_actions[attack_action_index]
                 # If agent chooses to END
@@ -165,7 +165,7 @@ class AlgoStrategy(gamelib.AlgoCore):
 
             # Defence agent choose action
             if not defence_end:
-                defence_action_index = self.defence_agent.choose_action(next_s)
+                defence_action_index = self.defence_agent.choose_action(next_s, i)
                 self.previous_defences.append(defence_action_index)
                 defence_action = self.defence_actions[defence_action_index]
                 # If agent chooses to END

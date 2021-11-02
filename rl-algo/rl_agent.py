@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-
+import gamelib
 
 class ReplayBuffer():
     '''
@@ -159,7 +159,7 @@ class Agent():
         except OSError:
           self.dqn = build_dqn(alpha, num_actions, input_shape, 128, 128)
 
-    def choose_action(self, state):
+    def choose_action(self, state, i):
         '''
         Choose an action given the current state
         Exploration: performs a random action with probability epsilon
@@ -172,9 +172,9 @@ class Agent():
             action = np.random.choice(self.action_space)
         # Exploitation
         else:
-            actions = self.dqn.predict(state)
-            action = np.argmax(actions) # Chooses the action with the highest value, to convert into one-hot encoding later on
-
+            actions = self.dqn.predict(state)[0]
+            action = np.argsort(actions)[-i] # Choose the i'th best action
+            gamelib.debug_write(f'action choosen: {action}, epsilon: {self.epsilon}')
         return action
 
     def learn(self):

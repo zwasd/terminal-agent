@@ -1,0 +1,5 @@
+Random seed: 5583895790282390509
+---------------- Starting Your Algo --------------------
+Configuring your custom algo strategy...
+Performing turn 0 of your custom algo strategy
+Got EOF, parent game process must have died, exiting for cleanup
