@@ -10,3 +10,8 @@ dist/*
 
 *.zip
 */.idea/*
+
+errorFile*
+
+match.log
+results.csv

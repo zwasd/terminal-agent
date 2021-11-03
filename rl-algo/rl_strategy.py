@@ -96,12 +96,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Initialise agents
         self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file, defence_epsilon_file), 
                                    alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
-                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.996,
-                                   input_shape=425, epsilon=1)
+                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.998,
+                                   input_shape=425, epsilon=1.0)
         self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file, attack_epsilon_file), 
                                   alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
-                                  memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.996,
-                                  input_shape=425, epsilon=1)
+                                  memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.998,
+                                  input_shape=425, epsilon=1.0)
 
     def on_turn(self, turn_state):
         """
@@ -122,16 +122,18 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Check if there are previous experiences to learn from first
         if len(self.previous_defence_states) > 0 or len(self.previous_attack_states) > 0:
             # Calculate reward
-            reward = self.reward_function(self.previous_state, turn_state)
+            # reward = self.reward_function(self.previous_state, turn_state)
+            attack_reward = self.reward_function(self.previous_state, turn_state, 0)
+            defence_reward = self.reward_function(self.previous_state, turn_state, 0)
 
             # Remember the previous experiences. All previous actions will have the same reward
             # Remember for each agent
             for i in range(len(self.previous_defences)):
-                self.defence_agent.remember(self.previous_defence_states[i], self.previous_defences[i], reward, 
+                self.defence_agent.remember(self.previous_defence_states[i], self.previous_defences[i], attack_reward, 
                                             self.previous_defence_next_states[i], self.done)
             
             for i in range(len(self.previous_attacks)):
-                self.attack_agent.remember(self.previous_attack_states[i], self.previous_attacks[i], reward, 
+                self.attack_agent.remember(self.previous_attack_states[i], self.previous_attacks[i], defence_reward, 
                                            self.previous_attack_next_states[i], self.done)
             
             # Agent learn from replay memory
@@ -192,7 +194,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         
         random = agent.decide_random_or_not()
-        gamelib.debug_write(f"epsilon = {agent.epsilon}")
+        # gamelib.debug_write(f"epsilon = {agent.epsilon}")
         # if random is true, keep generating random action until getting a valid action
         if random:
             while True:
@@ -258,6 +260,13 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Agent save model and replay memory
         self.attack_agent.save_model_and_memory()
         self.defence_agent.save_model_and_memory()
+
+        # save results to file
+        win = 1 if winner == 1 else 0
+        health = state['p1Stats'][0]
+        opp_health = state['p2Stats'][0]
+        with open(os.path.join(os.path.dirname(__file__), 'results.csv'), 'a+') as f:
+            f.write(f'{win}, {health}, {opp_health}\n')
 
     def initialise_mobile(self):
         """
@@ -395,22 +404,19 @@ class AlgoStrategy(gamelib.AlgoCore):
     #     return reward
 
     def attack_reward(self, state):
-        pass
+        state = json.loads(state)
+        return 30 - state['p2Stats'][0]
 
     def defence_reward(self, state):
-        pass
+        state = json.loads(state)
+        return state['p1Stats'][0]
 
-    def state_reward(self, state, terminal, health, structure):
+    def state_reward(self, state, health=10, structure=1):
         """
         Reward for a particular state based on player and opponent stats and 
         usefulness of the deployed mobile and structure units.
         """
         state = json.loads(state)
-
-        # game end
-        if state['turnInfo'] == 2:
-            return terminal / math.log(state['endStats']['turns'] + 1) * \
-                    -1 if state['endStats']['winner'] == 2 else 1
 
         p1_health = state['p1Stats'][0]
         p2_health = state['p2Stats'][0]
@@ -435,15 +441,21 @@ class AlgoStrategy(gamelib.AlgoCore):
         return health * (p1_health - p2_health) + \
                 structure * (p1_total_structure - p2_total_structure)
 
-    def reward_function(self, prev_state, state, terminal=10000000, health=10, structure=1):
+    def reward_function(self, prev_state, state, t=0):
         """
         Reward difference between previous and current state
         """
         if prev_state is None:
             return 0
 
-        return self.state_reward(state, terminal, health, structure) - \
-            self.state_reward(prev_state, terminal, health, structure)
+        reward_type = [
+            self.state_reward, 
+            self.attack_reward, 
+            self.defence_reward
+        ]
+
+        return reward_type[t](state) - \
+            reward_type[t](prev_state)
 
             
 
