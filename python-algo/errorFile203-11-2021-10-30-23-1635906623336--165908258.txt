@@ -1,0 +1,20 @@
+Random seed: 5147461653277744407
+---------------- Starting Your Algo --------------------
+Configuring your custom algo strategy...
+Performing turn 0 of your custom algo strategy
+Performing turn 1 of your custom algo strategy
+Performing turn 2 of your custom algo strategy
+Got scored on at: [2, 11]
+All locations: [[2, 11]]
+Got scored on at: [2, 11]
+All locations: [[2, 11], [2, 11]]
+Performing turn 3 of your custom algo strategy
+Performing turn 4 of your custom algo strategy
+Traceback (most recent call last):
+  File "/home/d/duong/terminal-agent/python-algo/algo_strategy.py", line 238, in <module>
+    algo.start()
+  File "/home/d/duong/terminal-agent/python-algo/gamelib/algocore.py", line 59, in start
+    game_state_string = get_command()
+  File "/home/d/duong/terminal-agent/python-algo/gamelib/util.py", line 12, in get_command
+    ret = sys.stdin.readline()
+KeyboardInterrupt

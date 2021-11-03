@@ -103,7 +103,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.996,
                                   input_shape=425, epsilon=1)
 
-
     def on_turn(self, turn_state):
         """
         This function is called every turn with the game state wrapper as
@@ -113,6 +112,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         game engine.
         """
         game_state = gamelib.GameState(self.config, turn_state)
+        game_state.enable_warnings = False
         gamelib.debug_write('Performing turn {} of your custom algo strategy'.format(game_state.turn_number))
         # game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
 
@@ -150,19 +150,16 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Deploy structure units for maximum 10 actions or when run out of SB
         i = 0
-        while i < 10 and game_state.get_resource(0) >= 1:
+        while i < 10 and game_state.get_resource(0) >= 2:
             self.previous_defence_states.append(np.copy(next_s))
             
-            defence_action_index = self.defence_agent.choose_action(next_s, i)
+            defence_action_index, defence_action = self.choose_and_execute_action(self.defence_agent, self.defence_actions, game_state, next_s)
+            
             self.previous_defences.append(defence_action_index)
-            defence_action = self.defence_actions[defence_action_index]
-            # If agent chooses to END
+            
             if defence_action[0] == "END":
                 self.previous_defence_next_states.append(np.copy(next_s))
                 break
-            # Otherwise, execute action
-            else:
-                self.execute_action(defence_action, game_state)
 
             next_s = self.retrieve_state(game_state)
             self.previous_defence_next_states.append(np.copy(next_s))
@@ -173,16 +170,13 @@ class AlgoStrategy(gamelib.AlgoCore):
         while i < 10 and game_state.get_resource(1) >= 1:
             self.previous_attack_states.append(np.copy(next_s))
 
-            attack_action_index = self.attack_agent.choose_action(next_s, i)
+            attack_action_index, attack_action = self.choose_and_execute_action(self.attack_agent, self.attack_actions, game_state, next_s)
+
             self.previous_attacks.append(attack_action_index)
-            attack_action = self.attack_actions[attack_action_index]
-            # If agent chooses to END
+
             if attack_action[0] == "END":
                 self.previous_attack_next_states.append(np.copy(next_s))
                 break
-            # Otherwise, execute action
-            else:
-                self.execute_action(attack_action, game_state)
             
             next_s = self.retrieve_state(game_state)
             self.previous_attack_next_states.append(np.copy(next_s))
@@ -191,6 +185,27 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Save previous turn state to compute reward
         self.previous_state = turn_state
         game_state.submit_turn()
+
+    def choose_and_execute_action(self, agent, action_space, game_state, state):
+        random = agent.decide_random_or_not()
+        gamelib.debug_write(f"epsilon = {agent.epsilon}")
+        if random:
+            while True:
+                action_index = agent.choose_action(state, random)
+                action = action_space[action_index]
+                if action[0] == "END":
+                    return action_index, action
+                if self.execute_action(action, game_state):
+                    return action_index, action
+        else:
+            action_indices = agent.choose_action(state, random)
+            for i in range(action_indices.shape[0]):
+                action_index = action_indices[i]
+                action = action_space[action_index]
+                if action[0] == "END":
+                    return action_index, action
+                if self.execute_action(action, game_state):
+                    return action_index, action
 
     def on_action_frame(self, turn_string):
         """
@@ -306,10 +321,14 @@ class AlgoStrategy(gamelib.AlgoCore):
         End handling will be done outside, in on_turn function
         """
         unit, coordinates = action
+        success = False
         if unit == UPGRADE:
-            game_state.attempt_upgrade(coordinates)
+            if game_state.attempt_upgrade(coordinates) == 1:
+              success = True
         else:
-            game_state.attempt_spawn(unit, coordinates)
+            if game_state.attempt_spawn(unit, coordinates) == 1:
+              success = True
+        return success
 
     def retrieve_state(self, game_state):
         """
