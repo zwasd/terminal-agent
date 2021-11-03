@@ -159,23 +159,27 @@ class Agent():
         except OSError:
           self.dqn = build_dqn(alpha, num_actions, input_shape, 128, 128)
 
-    def choose_action(self, state, i):
+    def decide_random_or_not(self):
+        rand = np.random.random()
+        return rand < self.epsilon
+    
+    def choose_action(self, state, random):
         '''
         Choose an action given the current state
         Exploration: performs a random action with probability epsilon
         Exploitation: chooses optimal action using DQN
         '''  
         state = state[np.newaxis, :] # Transform the variable to include 1 more dimension, to fit into the DQN
-        rand = np.random.random()
+        
         # Exploration
-        if rand < self.epsilon:
+        if random == True:
             action = np.random.choice(self.action_space)
+            return action
         # Exploitation
         else:
             actions = self.dqn.predict(state)[0]
-            action = np.argsort(actions)[-i] # Choose the i'th best action
-            gamelib.debug_write(f'action choosen: {action}, epsilon: {self.epsilon}')
-        return action
+            action_indices = np.argsort(-actions) # Sort the indices of Q_value based on value in descending order
+            return action_indices
 
     def learn(self):
         '''
