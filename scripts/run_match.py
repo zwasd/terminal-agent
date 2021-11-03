@@ -30,7 +30,7 @@ def results_update(results_file, update, current):
             total_opp_health += values[2]
 
     print(f'[Matches {current-update+1}-{current}] '
-          f'Total wins: {win_count}/{update}, '
+          f'Total wins: {int(win_count)}/{update}, '
           f'Avg health: {total_health/update}, '
           f'Avg opp health: {total_opp_health/update}')
 

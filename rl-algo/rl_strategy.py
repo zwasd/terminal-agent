@@ -116,7 +116,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         gamelib.debug_write('Performing turn {} of your custom algo strategy'.format(game_state.turn_number))
         # game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
 
-        """ Put our agent action here """
         current_state = self.retrieve_state(game_state)
         
         # Check if there are previous experiences to learn from first
@@ -379,30 +378,6 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         return np.array(state, dtype=np.float16)
 
-    # Basic reward functions for testing
-    # def attack_reward(self, previous_state, current_state):
-    #     """
-    #     Reward calculation for attack agent
-    #     Reward = difference between the previous enemy health and current enemy health
-    #     Does not account for terminal rewards; those are handled directly in 
-    #     """
-    #     previous_enemy_health = previous_state[1]
-    #     current_enemy_health = current_state[1]
-    #     reward = -0.04
-    #     # If damage was done to enemy
-    #     if current_enemy_health < previous_enemy_health:
-    #         reward = previous_enemy_health - current_enemy_health
-    #     return reward
-
-    # def defence_reward(self, previous_state, current_state):
-    #     previous_my_health = previous_state[0]
-    #     current_my_health = current_state[0]
-    #     reward = -0.04
-    #     # If damage was done to agent
-    #     if current_my_health < previous_my_health:
-    #         reward = current_my_health - previous_my_health
-    #     return reward
-
     def attack_reward(self, state):
         state = json.loads(state)
         return 30 - state['p2Stats'][0]
@@ -411,32 +386,37 @@ class AlgoStrategy(gamelib.AlgoCore):
         state = json.loads(state)
         return state['p1Stats'][0]
 
+    def count_structure_points(self, units, map):
+        total_structure = len(units[UNIT_TYPE_TO_INDEX[WALL]]) + \
+                            len(units[UNIT_TYPE_TO_INDEX[SUPPORT]]) * 4 + \
+                            len(units[UNIT_TYPE_TO_INDEX[TURRET]]) * 2
+
+        upgrades = units[UNIT_TYPE_TO_INDEX[UPGRADE]]
+        for unit in upgrades:
+            unit_type = map[unit[0], unit[1]][0].unit_type
+            if unit_type == WALL:
+                total_structure += 1
+            elif unit_type == SUPPORT or unit_type == TURRET:
+                total_structure += 4
+
+        return total_structure
+
     def state_reward(self, state, health=10, structure=1):
         """
         Reward for a particular state based on player and opponent stats and 
         usefulness of the deployed mobile and structure units.
         """
-        state = json.loads(state)
+        game_state = gamelib.GameState(self.config, state)
+        json_state = json.loads(state)
 
-        p1_health = state['p1Stats'][0]
-        p2_health = state['p2Stats'][0]
+        p1_health = json_state['p1Stats'][0]
+        p2_health = json_state['p2Stats'][0]
 
         # reward based on unit cost
-        p1_total_structure = 0
-        p2_total_structure = 0
-
-        p1_units = state['p1Units']
-        p2_units = state['p2Units']
-
-
-        p1_total_structure += len(p1_units[UNIT_TYPE_TO_INDEX[WALL]]) + \
-                                len(p1_units[UNIT_TYPE_TO_INDEX[SUPPORT]]) * 4 + \
-                                len(p1_units[UNIT_TYPE_TO_INDEX[TURRET]]) * 2 + \
-                                state['p1Stats'][1]
-        p2_total_structure += len(p2_units[UNIT_TYPE_TO_INDEX[WALL]]) + \
-                                len(p2_units[UNIT_TYPE_TO_INDEX[SUPPORT]]) * 4 + \
-                                len(p2_units[UNIT_TYPE_TO_INDEX[TURRET]]) * 2 + \
-                                state['p2Stats'][1]
+        p1_total_structure = json_state['p1Stats'][1] + \
+                self.count_structure_points(json_state['p1Units'], game_state.game_map)
+        p2_total_structure = json_state['p2Stats'][1] + \
+                self.count_structure_points(json_state['p2Units'], game_state.game_map)
 
         return health * (p1_health - p2_health) + \
                 structure * (p1_total_structure - p2_total_structure)
@@ -454,10 +434,8 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.defence_reward
         ]
 
-        return reward_type[t](state) - \
-            reward_type[t](prev_state)
+        return reward_type[t](state) - reward_type[t](prev_state)
 
-            
 
 if __name__ == "__main__":
     algo = AlgoStrategy()
