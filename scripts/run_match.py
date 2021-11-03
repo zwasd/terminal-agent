@@ -18,6 +18,7 @@ def run_single_game(process_command):
 
 def results_update(results_file, update, current):
     win_count = 0
+    turns_count = 0
     total_health = 0
     total_opp_health = 0
 
@@ -26,11 +27,13 @@ def results_update(results_file, update, current):
         for result in results:
             values = [float(x) for x in result.split(', ')]
             win_count += values[0]
-            total_health += values[1]
-            total_opp_health += values[2]
+            turns_count += values[1]
+            total_health += values[2]
+            total_opp_health += values[3]
 
     print(f'[Matches {current-update+1}-{current}] '
           f'Total wins: {int(win_count)}/{update}, '
+          f'Avg turns: {int(turns_count)/update}, '
           f'Avg health: {total_health/update}, '
           f'Avg opp health: {total_opp_health/update}')
 
@@ -96,6 +99,8 @@ def main():
         run_single_game("cd {} && java -jar engine.jar work {} {}".format(parent_dir, algo1, algo2))
         if i % update_episode == 0:
             results_update(results_file, update_episode, i)
+        elif i == num_plays:
+            results_update(results_file, num_plays % update_episode, i)
     
     print('\nDone!')
 
