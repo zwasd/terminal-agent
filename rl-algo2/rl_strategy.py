@@ -193,7 +193,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         
         random = agent.decide_random_or_not()
-        # gamelib.debug_write(f"epsilon = {agent.epsilon}")
+        gamelib.debug_write(f"epsilon = {agent.epsilon}")
         # if random is true, keep generating random action until getting a valid action
         if random:
             while True:
@@ -257,15 +257,17 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.defence_agent.learn()
 
         # Agent save model and replay memory
-        self.attack_agent.save_model_and_memory()
-        self.defence_agent.save_model_and_memory()
+        if not os.path.exists('.test'):
+            self.attack_agent.save_model_and_memory()
+            self.defence_agent.save_model_and_memory()
 
         # save results to file
         win = 1 if winner == 1 else 0
+        turns = state['endStats']['turns']
         health = state['p1Stats'][0]
         opp_health = state['p2Stats'][0]
         with open(os.path.join(os.path.dirname(__file__), 'results.csv'), 'a+') as f:
-            f.write(f'{win}, {health}, {opp_health}\n')
+            f.write(f'{win}, {turns}, {health}, {opp_health}\n')
 
     def initialise_mobile(self):
         """

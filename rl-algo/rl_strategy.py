@@ -193,7 +193,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         """
         
         random = agent.decide_random_or_not()
-        # gamelib.debug_write(f"epsilon = {agent.epsilon}")
+        gamelib.debug_write(f"epsilon = {agent.epsilon}")
         # if random is true, keep generating random action until getting a valid action
         if random:
             while True:
