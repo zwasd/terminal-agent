@@ -108,7 +108,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         an argument. The wrapper stores the state of the arena and has methods
         for querying its state, allocating your current resources as planned
         unit deployments, and transmitting your intended deployments to the
-        game engine.
+        game engine. 
         """
         game_state = gamelib.GameState(self.config, turn_state)
         game_state.enable_warnings = False
