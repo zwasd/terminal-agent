@@ -22,20 +22,24 @@ def results_update(results_file, update, current):
     total_health = 0
     total_opp_health = 0
 
-    with open(results_file, 'r') as f:
-        results = f.readlines()[-update:]
-        for result in results:
-            values = [float(x) for x in result.split(', ')]
-            win_count += values[0]
-            turns_count += values[1]
-            total_health += values[2]
-            total_opp_health += values[3]
+    try:
+        with open(results_file, 'r') as f:
+            results = f.readlines()[-update:]
+            for result in results:
+                values = [float(x) for x in result.split(', ')]
+                win_count += values[0]
+                turns_count += values[1]
+                total_health += values[2]
+                total_opp_health += values[3]
 
-    print(f'[Matches {current-update+1}-{current}] '
-          f'Total wins: {int(win_count)}/{update}, '
-          f'Avg turns: {int(turns_count)/update}, '
-          f'Avg health: {total_health/update}, '
-          f'Avg opp health: {total_opp_health/update}')
+        print(f'[Matches {current-update+1}-{current}] '
+            f'Total wins: {int(win_count)}/{update}, '
+            f'Avg turns: {int(turns_count)/update}, '
+            f'Avg health: {total_health/update}, '
+            f'Avg opp health: {total_opp_health/update}')
+    except:
+        print('Error with displaying results')
+
 
 
 def main():
