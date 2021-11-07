@@ -10,9 +10,9 @@ from rl_agent import Agent # Import RL Agent
 import os
 
 """
-Version date: 26/10/21
+Version date: 6/11/21
 
-- Shifted agent and action initialisation from __init__ to on_game_start
+Included breached and scored locations
 """
 
 class AlgoStrategy(gamelib.AlgoCore):
@@ -25,10 +25,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Additions
         self.mobile_locations = self.initialise_mobile()
         self.structure_locations = self.initialise_structure()
-        # generate_actions() cannot be done here as the global parameters are not initialised yet
-        # We can generate_actions on_game_start
-        # self.defence_actions = [] 
-        # self.attack_actions = []
+        self.enemy_locations = self.initialise_enemy_mobile()
+        self.breached_locations = [0 for i in range(len(self.mobile_locations))]
+        self.scored_locations = self.breached_locations.copy()
+
         self.done = False # Whether the game has ended
         self.updated_last = False # Whether the final update with terminal rewards is done
         self.previous_state = None
@@ -42,7 +42,6 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.previous_attack_next_states = []
 
         
-
     def on_game_start(self, config):
         """ 
         Read in config and perform any initial setup here 
@@ -97,11 +96,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file, defence_epsilon_file), 
                                    alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
                                    memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.998,
-                                   input_shape=425, epsilon=1.0)
+                                   input_shape=481, epsilon=1.0)
         self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file, attack_epsilon_file), 
                                   alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.998,
-                                  input_shape=425, epsilon=1.0)
+                                  input_shape=481, epsilon=1.0)
 
     def on_turn(self, turn_state):
         """
@@ -109,7 +108,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         an argument. The wrapper stores the state of the arena and has methods
         for querying its state, allocating your current resources as planned
         unit deployments, and transmitting your intended deployments to the
-        game engine.
+        game engine. 
         """
         game_state = gamelib.GameState(self.config, turn_state)
         game_state.enable_warnings = False
@@ -185,6 +184,8 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Save previous turn state to compute reward
         self.previous_state = turn_state
+        # Reset breached and scored locations
+        self.reset_breached_and_scored()
         game_state.submit_turn()
 
     def choose_and_execute_action(self, agent, action_space, game_state, state):
@@ -221,19 +222,26 @@ class AlgoStrategy(gamelib.AlgoCore):
         Processing the action frames is complicated so we only suggest it if you have time and experience.
         Full doc on format of a game frame at in json-docs.html in the root of the Starterkit.
         """
-        # Let's record at what position we get scored on
+        # Record breached locations
         state = json.loads(turn_string)
         events = state["events"]
         breaches = events["breach"]
         for breach in breaches:
-            location = breach[0]
+            location = breach[0] # Location is a list [x, y] or [y, x]
+            damage = breach[1]
+            # for location on board = 0. If there is damage, 0 += damage
+            # Check owner of the mobile unit
             unit_owner_self = True if breach[4] == 1 else False
-            # When parsing the frame data directly, 
-            # 1 is integer for yourself, 2 is opponent (StarterKit code uses 0, 1 as player_index instead)
-            if not unit_owner_self:
-                # gamelib.debug_write("Got scored on at: {}".format(location))
-                self.scored_on_locations.append(location)
-                # gamelib.debug_write("All locations: {}".format(self.scored_on_locations))
+            if not unit_owner_self: # If the unit belongs to the opponent, means they attacked me
+                # Get index of breached location
+                breach_index = self.mobile_locations.index(location)
+                self.breached_locations[breach_index] += damage
+                gamelib.debug_write("Got scored on at: {}".format(location))
+            else: # Unit belongs to me, means I attacked them
+                # Get index of attacked location
+                attack_index = self.enemy_locations.index(location)
+                self.scored_locations[attack_index] += damage
+                gamelib.debug_write("Scored on at: {}".format(location))
 
     def on_game_end(self, game_state):
         # We should be able to use the state json string
@@ -284,6 +292,22 @@ class AlgoStrategy(gamelib.AlgoCore):
             x += 1
             y -= 1
         return mobile_locations
+
+    def initialise_enemy_mobile(self):
+        """
+        Initialise locations where enemy mobile units can be deployed
+        AKA the locations where our units will scoree
+        Size of list: 28
+        """
+        y = 14
+        x = 0
+        enemy_locations = []
+        while x < 14:
+            enemy_locations.append([x     , y])
+            enemy_locations.append([27 - x, y])
+            x += 1
+            y += 1
+        return enemy_locations
 
     def initialise_structure(self):
         """
@@ -358,6 +382,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         - My SP
         - Every valid position on the board, with its corresponding unit, if there is one
         Return state here is 1-dimensional
+        - Breached locations
+        - Scored locations
         """
         state = []
         # Add my health, opponent health, my MP and SP
@@ -377,8 +403,18 @@ class AlgoStrategy(gamelib.AlgoCore):
                     # Else, add the corresponding unit
                     else:
                         state.append(UNIT_TYPE_TO_INDEX[game_state.game_map[x, y][0].unit_type])
+        # Add breached and scored locations
+        state.extend(self.breached_locations)
+        state.extend(self.scored_locations)
 
         return np.array(state, dtype=np.float16)
+
+    def reset_breached_and_scored(self):
+        """
+        Resets the breached and scored locations, so that on_action_frame can be updated
+        """
+        self.breached_locations = [0 for i in range(len(self.mobile_locations))]
+        self.scored_locations = self.breached_locations.copy()
 
     def attack_reward(self, state):
         state = json.loads(state)
