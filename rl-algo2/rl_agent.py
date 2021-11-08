@@ -11,7 +11,7 @@ class ReplayBuffer():
     During learning, we apply Q-learning updates on samples of experience,
     drawn uniformly at random from the pool of stored samples
     '''
-    def __init__(self, max_size, input_shape, num_actions, discrete=False):
+    def __init__(self, max_size, input_shape, num_actions):
         '''
         Variables:
         - memory_size: size of the replay buffer
@@ -24,12 +24,11 @@ class ReplayBuffer():
         '''
 
         self.mem_size = max_size
-        self.discrete = discrete
-        dtype = np.int8 if self.discrete else np.float16
+        dtype = np.float16
 
         self.state_memory = np.zeros((self.mem_size, input_shape), dtype=dtype)
         self.new_state_memory = np.zeros((self.mem_size, input_shape), dtype=dtype)
-        self.action_memory = np.zeros((self.mem_size, num_actions), dtype=dtype)
+        self.action_memory = np.zeros((self.mem_size), dtype=dtype)
         self.reward_memory = np.zeros((self.mem_size), dtype=dtype)
         self.terminal_memory = np.zeros((self.mem_size), dtype=dtype)
         self.memory_counter = 0
@@ -46,13 +45,7 @@ class ReplayBuffer():
         self.new_state_memory[index] = next_state
         self.reward_memory[index] = reward
         self.terminal_memory[index] = 1 - int(done) # 1 if not done, 0 if done
-        if self.discrete:
-            # Record with one-hot encoding
-            actions = np.zeros(self.action_memory.shape[1])
-            actions[action] = 1.0
-            self.action_memory[index] = actions
-        else:
-            self.action_memory[index] = action
+        self.action_memory[index] = action
         
         # Update memory_counter
         self.memory_counter += 1
@@ -76,14 +69,14 @@ class ReplayBuffer():
         return states, actions, rewards, next_states, terminal
 
     def save(self, filepath):
-        np.savez_compressed(filepath, 
-                            mem_size = self.mem_size,
-                            state_memory = self.state_memory,
-                            new_state_memory = self.new_state_memory,
-                            action_memory = self.action_memory,
-                            reward_memory = self.reward_memory,
-                            terminal_memory = self.terminal_memory,
-                            memory_counter = self.memory_counter
+        np.savez(filepath, 
+            mem_size = self.mem_size,
+            state_memory = self.state_memory,
+            new_state_memory = self.new_state_memory,
+            action_memory = self.action_memory,
+            reward_memory = self.reward_memory,
+            terminal_memory = self.terminal_memory,
+            memory_counter = self.memory_counter
         )
     
     def load(self, filepath):
@@ -151,7 +144,7 @@ class Agent():
         self.memo_file = fname[1]
         self.epsilon_file = fname[2]
 
-        self.memory = ReplayBuffer(memory_size, input_shape, num_actions, discrete=True)
+        self.memory = ReplayBuffer(memory_size, input_shape, num_actions)
 
         # Load/Create the model and the replay buffer
         try:
@@ -193,10 +186,8 @@ class Agent():
         # Else
         # Get a batch of experiences
         state, action, reward, next_state, done = self.memory.sample_buffer(self.batch_size)
-        
-        # Convert one-hot encoded action back into integer representation by matrix dot product
-        action_values = np.array(self.action_space, dtype=np.int8)
-        action_indices = np.dot(action, action_values)
+
+        action_indices = action.astype(np.int32)
         
         # Evaluate Q-function of the states
         q_eval = self.dqn.predict(state)
@@ -221,7 +212,7 @@ class Agent():
         # Save replay buffer
         self.memory.save(self.memo_file)
         # Save epsilon value
-        np.savez_compressed(self.epsilon_file, epsilon = self.epsilon)
+        np.savez(self.epsilon_file, epsilon = self.epsilon)
         # Save model
         self.dqn.save(self.model_file)
 

@@ -95,11 +95,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Initialise agents
         self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file, defence_epsilon_file), 
                                    alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
-                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.998,
+                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.9998,
                                    input_shape=481, epsilon=1.0)
         self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file, attack_epsilon_file), 
                                   alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
-                                  memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.998,
+                                  memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.9998,
                                   input_shape=481, epsilon=1.0)
 
     def on_turn(self, turn_state):
