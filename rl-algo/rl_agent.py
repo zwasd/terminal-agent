@@ -69,14 +69,14 @@ class ReplayBuffer():
         return states, actions, rewards, next_states, terminal
 
     def save(self, filepath):
-        np.savez_compressed(filepath, 
-                            mem_size = self.mem_size,
-                            state_memory = self.state_memory,
-                            new_state_memory = self.new_state_memory,
-                            action_memory = self.action_memory,
-                            reward_memory = self.reward_memory,
-                            terminal_memory = self.terminal_memory,
-                            memory_counter = self.memory_counter
+        np.savez(filepath, 
+            mem_size = self.mem_size,
+            state_memory = self.state_memory,
+            new_state_memory = self.new_state_memory,
+            action_memory = self.action_memory,
+            reward_memory = self.reward_memory,
+            terminal_memory = self.terminal_memory,
+            memory_counter = self.memory_counter
         )
     
     def load(self, filepath):
