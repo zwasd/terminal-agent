@@ -25,9 +25,9 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Additions
         self.mobile_locations = self.initialise_mobile()
         self.structure_locations = self.initialise_structure()
-        self.enemy_locations = self.initialise_enemy_mobile()
-        self.breached_locations = [0 for i in range(len(self.mobile_locations))]
-        self.scored_locations = self.breached_locations.copy()
+        # self.enemy_locations = self.initialise_enemy_mobile()
+        # self.breached_locations = [0 for i in range(len(self.mobile_locations))]
+        # self.scored_locations = self.breached_locations.copy()
 
         self.done = False # Whether the game has ended
         self.updated_last = False # Whether the final update with terminal rewards is done
@@ -95,12 +95,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Initialise agents
         self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file, defence_epsilon_file), 
                                    alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
-                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.9998,
-                                   input_shape=481, epsilon=1.0)
+                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.999,
+                                   input_shape=425, epsilon=1.0)
         self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file, attack_epsilon_file), 
                                   alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
-                                  memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.9998,
-                                  input_shape=481, epsilon=1.0)
+                                  memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.999,
+                                  input_shape=425, epsilon=1.0)
 
     def on_turn(self, turn_state):
         """
@@ -185,7 +185,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Save previous turn state to compute reward
         self.previous_state = turn_state
         # Reset breached and scored locations
-        self.reset_breached_and_scored()
+        # self.reset_breached_and_scored()
         game_state.submit_turn()
 
     def choose_and_execute_action(self, agent, action_space, game_state, state):
@@ -223,25 +223,26 @@ class AlgoStrategy(gamelib.AlgoCore):
         Full doc on format of a game frame at in json-docs.html in the root of the Starterkit.
         """
         # Record breached locations
-        state = json.loads(turn_string)
-        events = state["events"]
-        breaches = events["breach"]
-        for breach in breaches:
-            location = breach[0] # Location is a list [x, y] or [y, x]
-            damage = breach[1]
-            # for location on board = 0. If there is damage, 0 += damage
-            # Check owner of the mobile unit
-            unit_owner_self = True if breach[4] == 1 else False
-            if not unit_owner_self: # If the unit belongs to the opponent, means they attacked me
-                # Get index of breached location
-                breach_index = self.mobile_locations.index(location)
-                self.breached_locations[breach_index] += damage
-                gamelib.debug_write("Got scored on at: {}".format(location))
-            else: # Unit belongs to me, means I attacked them
-                # Get index of attacked location
-                attack_index = self.enemy_locations.index(location)
-                self.scored_locations[attack_index] += damage
-                gamelib.debug_write("Scored on at: {}".format(location))
+        # state = json.loads(turn_string)
+        # events = state["events"]
+        # breaches = events["breach"]
+        # for breach in breaches:
+        #     location = breach[0] # Location is a list [x, y] or [y, x]
+        #     damage = breach[1]
+        #     # for location on board = 0. If there is damage, 0 += damage
+        #     # Check owner of the mobile unit
+        #     unit_owner_self = True if breach[4] == 1 else False
+        #     if not unit_owner_self: # If the unit belongs to the opponent, means they attacked me
+        #         # Get index of breached location
+        #         breach_index = self.mobile_locations.index(location)
+        #         self.breached_locations[breach_index] += damage
+        #         gamelib.debug_write("Got scored on at: {}".format(location))
+        #     else: # Unit belongs to me, means I attacked them
+        #         # Get index of attacked location
+        #         attack_index = self.enemy_locations.index(location)
+        #         self.scored_locations[attack_index] += damage
+        #         gamelib.debug_write("Scored on at: {}".format(location))
+        pass
 
     def on_game_end(self, game_state):
         # We should be able to use the state json string
@@ -404,8 +405,8 @@ class AlgoStrategy(gamelib.AlgoCore):
                     else:
                         state.append(UNIT_TYPE_TO_INDEX[game_state.game_map[x, y][0].unit_type])
         # Add breached and scored locations
-        state.extend(self.breached_locations)
-        state.extend(self.scored_locations)
+        # state.extend(self.breached_locations)
+        # state.extend(self.scored_locations)
 
         return np.array(state, dtype=np.float16)
 
