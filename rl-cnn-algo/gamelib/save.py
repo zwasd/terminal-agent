@@ -29,6 +29,7 @@ from tensorflow.python.keras.saving.saved_model import load as saved_model_load
 from tensorflow.python.keras.saving.saved_model import save as saved_model_save
 from tensorflow.python.keras.utils import generic_utils
 from tensorflow.python.saved_model import loader_impl
+from tensorflow.python.util.tf_export import keras_export
 
 # pylint: disable=g-import-not-at-top
 if sys.version_info >= (3, 4):
@@ -46,6 +47,7 @@ _HDF5_EXTENSIONS = ['.h5', '.hdf5', '.keras']
 _KERAS_SAVED_MODEL_STILL_EXPERIMENTAL = True
 
 
+@keras_export('keras.models.save_model')
 def save_model(model,
                filepath,
                overwrite=True,
@@ -136,6 +138,7 @@ def save_model(model,
                           signatures, options)
 
 
+@keras_export('keras.models.load_model')
 def load_model(filepath, custom_objects=None, compile=True):  # pylint: disable=redefined-builtin
   """Loads a model saved via `save_model`.
 
