@@ -173,7 +173,11 @@ def load_model_from_hdf5(filepath, custom_objects=None, compile=True):  # pylint
     model_config = f.attrs.get('model_config')
     if model_config is None:
       raise ValueError('No model found in config file.')
-    model_config = json.loads(model_config)
+    if hasattr(model_config, 'decode'):
+      model_config = json.loads(model_config.decode('utf-8'))
+    else:
+      model_config = json.loads(model_config)
+    
     model = model_config_lib.model_from_config(model_config,
                                                custom_objects=custom_objects)
 
@@ -187,7 +191,11 @@ def load_model_from_hdf5(filepath, custom_objects=None, compile=True):  # pylint
         logging.warning('No training configuration found in the save file, so '
                         'the model was *not* compiled. Compile it manually.')
         return model
-      training_config = json.loads(training_config)
+
+      if hasattr(training_config, 'decode'):
+        training_config = json.loads(training_config.decode('utf-8'))
+      else:
+        training_config = json.loads(training_config)
 
       # Compile model.
       model.compile(**saving_utils.compile_args_from_training_config(
@@ -656,11 +664,17 @@ def load_weights_from_hdf5_group(f, layers):
           and weights file.
   """
   if 'keras_version' in f.attrs:
-    original_keras_version = f.attrs['keras_version']
+    if hasattr(f.attrs['keras_version'], 'decode'):
+      original_keras_version = f.attrs['keras_version'].decode('utf8')
+    else:
+      original_keras_version = f.attrs['keras_version']
   else:
     original_keras_version = '1'
   if 'backend' in f.attrs:
-    original_backend = f.attrs['backend']
+    if hasattr(f.attrs['backend'], 'decode'):
+      original_backend = f.attrs['backend'].decode('utf8')
+    else:
+      original_backend = f.attrs['backend']
   else:
     original_backend = None
 
@@ -727,11 +741,17 @@ def load_weights_from_hdf5_group_by_name(
           and weights file and skip_match=False.
   """
   if 'keras_version' in f.attrs:
-    original_keras_version = f.attrs['keras_version']
+    if hasattr(f.attrs['keras_version'], 'decode'):
+      original_keras_version = f.attrs['keras_version'].decode('utf8')
+    else:
+      original_keras_version = f.attrs['keras_version']
   else:
     original_keras_version = '1'
   if 'backend' in f.attrs:
-    original_backend = f.attrs['backend'].decode('utf8')
+    if hasattr(f.attrs['backend'], 'decode'):
+      original_backend = f.attrs['backend'].decode('utf8')
+    else:
+      original_backend = f.attrs['backend']
   else:
     original_backend = None
 
