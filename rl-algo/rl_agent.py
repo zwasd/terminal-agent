@@ -24,13 +24,12 @@ class ReplayBuffer():
         '''
 
         self.mem_size = max_size
-        dtype = np.float16
 
-        self.state_memory = np.zeros((self.mem_size, input_shape), dtype=dtype)
-        self.new_state_memory = np.zeros((self.mem_size, input_shape), dtype=dtype)
-        self.action_memory = np.zeros((self.mem_size), dtype=dtype)
-        self.reward_memory = np.zeros((self.mem_size), dtype=dtype)
-        self.terminal_memory = np.zeros((self.mem_size), dtype=dtype)
+        self.state_memory = np.zeros((self.mem_size, input_shape), dtype=np.float16)
+        self.new_state_memory = np.zeros((self.mem_size, input_shape), dtype=np.float16)
+        self.action_memory = np.zeros((self.mem_size, num_actions), dtype=np.int8)
+        self.reward_memory = np.zeros((self.mem_size), dtype=np.float16)
+        self.terminal_memory = np.zeros((self.mem_size), dtype=np.int8)
         self.memory_counter = 0
 
     def store_transition(self, state, action, reward, next_state, done):
@@ -45,7 +44,10 @@ class ReplayBuffer():
         self.new_state_memory[index] = next_state
         self.reward_memory[index] = reward
         self.terminal_memory[index] = 1 - int(done) # 1 if not done, 0 if done
-        self.action_memory[index] = action
+        
+        actions = np.zeros(self.action_memory.shape[1])
+        actions[action] = 1.0
+        self.action_memory[index] = actions
         
         # Update memory_counter
         self.memory_counter += 1
@@ -187,7 +189,9 @@ class Agent():
         # Get a batch of experiences
         state, action, reward, next_state, done = self.memory.sample_buffer(self.batch_size)
 
-        action_indices = action.astype(np.int32)
+        # Convert one-hot encoded action back into integer representation by matrix dot product
+        action_values = np.array(self.action_space, dtype=np.int32)
+        action_indices = np.dot(action, action_values)
         
         # Evaluate Q-function of the states
         q_eval = self.dqn.predict(state)
@@ -198,7 +202,7 @@ class Agent():
 
         # Update our utilities with TD learning
         q_target[batch_index, action_indices] = reward + self.gamma * np.max(q_next, axis=1) * done
-
+        
         # Fit our DQN
         self.dqn.fit(state, q_target, verbose=0)
 
