@@ -85,8 +85,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         self.defence_actions, self.attack_actions = self.generate_actions()
 
         algo_path = os.path.dirname(__file__)
-        defence_agent_file = os.path.join(algo_path, "defence_model")
-        attack_agent_file = os.path.join(algo_path, "attack_model")
+        defence_agent_file = os.path.join(algo_path, "defence_model.h5")
+        attack_agent_file = os.path.join(algo_path, "attack_model.h5")
         defence_memo_file = os.path.join(algo_path, "defence.npz")
         attack_memo_file = os.path.join(algo_path, "attack.npz")
         defence_epsilon_file = os.path.join(algo_path, "defence_epsilon.npz")
@@ -95,11 +95,11 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Initialise agents
         self.defence_agent = Agent(fname=(defence_agent_file, defence_memo_file, defence_epsilon_file), 
                                    alpha=0.005, gamma=1, num_actions=len(self.defence_actions), 
-                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.9998,
+                                   memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.998,
                                    input_shape=481, epsilon=1.0)
         self.attack_agent = Agent(fname=(attack_agent_file, attack_memo_file, attack_epsilon_file), 
                                   alpha=0.005, gamma=1, num_actions=len(self.attack_actions), 
-                                  memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.9998,
+                                  memory_size=10000, batch_size=64, epsilon_min=0.01, epsilon_dec=0.998,
                                   input_shape=481, epsilon=1.0)
 
     def on_turn(self, turn_state):
