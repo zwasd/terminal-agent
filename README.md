@@ -1,4 +1,8 @@
-# C1GamesStarterKit
+# FOR CS4246 PROJECT TEAM 14
+
+Pls refer to the folder CS4246_Algos
+
+## C1GamesStarterKit
 
 Welcome to the C1 Terminal Starter Kit! The repository contains a collection of scripts and 
 language-specific starter algos, to help you start your journey to develop the ultimate algo.
